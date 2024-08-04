@@ -46,6 +46,7 @@ enum AttentionKernelType {
   AttentionKernel_TrtFusedCrossAttention,
   AttentionKernel_CutlassMemoryEfficientAttention,
   AttentionKernel_FlashAttention,
+  AttentionKernel_CudnnFlashAttention,
   AttentionKernel_Default
 };
 

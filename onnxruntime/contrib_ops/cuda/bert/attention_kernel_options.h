@@ -46,7 +46,7 @@ class AttentionKernelOptions {
   bool use_flash_attention_{true};
   bool use_efficient_attention_{true};
   bool use_trt_fused_attention_{true};
-  bool use_cudnn_flash_attention_{false};
+  bool use_cudnn_flash_attention_{true};
   bool use_unfused_{true};
 
   bool use_trt_flash_attention_{true};
