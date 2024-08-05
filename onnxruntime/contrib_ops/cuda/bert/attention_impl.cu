@@ -329,17 +329,17 @@ Status FlashAttention(
 
 template <typename T>
 Status CudnnFlashAttention(
-    const cudaDeviceProp& device_prop,
     cudnnHandle_t cudnn_handle,
     Stream* ort_stream,
     contrib::AttentionParameters& parameters,
     AttentionData<T>& data,
     float scale) {
   assert(data.qkv_format == AttentionQkvFormat::Q_K_V_BSNH ||
-         data.qkv_format == AttentionQkvFormat::Q_K_V_BSNH_BNSH_BNSH);
+         data.qkv_format == AttentionQkvFormat::Q_K_V_BSNH_BNSH_BNSH ||
+         data.qkv_format == AttentionQkvFormat::Q_K_V_BNSH);
   assert(nullptr == data.mask_index);
   assert(nullptr == data.relative_position_bias);
-  assert(parameters.head_size == parameters.v_head_size);
+  // assert(parameters.head_size == parameters.v_head_size);
 
   constexpr bool is_bf16 = false;
 
@@ -368,13 +368,11 @@ Status CudnnFlashAttention(
 
 template <>
 Status CudnnFlashAttention(
-    const cudaDeviceProp& device_prop,
     cudnnHandle_t cudnn_handle,
     Stream* ort_stream,
     contrib::AttentionParameters& parameters,
     AttentionData<float>& data,
     float scale) {
-  ORT_UNUSED_PARAMETER(device_prop);
   ORT_UNUSED_PARAMETER(cudnn_handle);
   ORT_UNUSED_PARAMETER(ort_stream);
   ORT_UNUSED_PARAMETER(parameters);
@@ -631,7 +629,7 @@ Status QkvToContext(
 #endif
 
   if (data.kernel_type == AttentionKernelType::AttentionKernel_CudnnFlashAttention) {
-    return CudnnFlashAttention(device_prop, cudnn, ort_stream, parameters, data, scale);
+    return CudnnFlashAttention(cudnn, ort_stream, parameters, data, scale);
   }
 
 #if USE_MEMORY_EFFICIENT_ATTENTION

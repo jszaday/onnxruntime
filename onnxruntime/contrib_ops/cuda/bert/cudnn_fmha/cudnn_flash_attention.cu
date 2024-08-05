@@ -73,7 +73,9 @@ bool is_supported(const cudaDeviceProp& dprops,
 
 // A helper function to set stride for q, k, v or output tensor.
 inline void set_stride(std::vector<int64_t>& stride,
-                       int64_t batch_size, int64_t num_heads, int64_t sequence_length, int64_t head_size,
+                       int64_t num_heads,
+                       int64_t sequence_length,
+                       int64_t head_size,
                        bool is_bsnh) {
   stride = {num_heads * sequence_length * head_size,
             is_bsnh ? head_size : (head_size * sequence_length),
@@ -140,7 +142,7 @@ std::shared_ptr<fe::graph::Graph> build_graph(GraphBuildParams& params) {
 
   assert(qkv_format == contrib::AttentionQkvFormat::Q_K_V_BSNH ||
          qkv_format == contrib::AttentionQkvFormat::Q_K_V_BSNH_BNSH_BNSH ||
-         qkv_format == contrib::AttentionQkvFormat::Q_K_V_BSNH);
+         qkv_format == contrib::AttentionQkvFormat::Q_K_V_BNSH);
 
   auto mha_graph = std::make_shared<fe::graph::Graph>();
   mha_graph->set_io_data_type(is_bf16 ? fe::DataType_t::BFLOAT16 : fe::DataType_t::HALF)
@@ -154,7 +156,7 @@ std::shared_ptr<fe::graph::Graph> build_graph(GraphBuildParams& params) {
   bool is_kv_bsnh = qkv_format == contrib::AttentionQkvFormat::Q_K_V_BSNH;
 
   std::vector<int64_t> stride;
-  set_stride(stride, batch_size, num_heads_q, sequence_length_q, head_size_qk, is_q_bsnh);
+  set_stride(stride, num_heads_q, sequence_length_q, head_size_qk, is_q_bsnh);
 
   auto Q = mha_graph->tensor(fe::graph::Tensor_attributes()
                                 .set_name("Q")
@@ -162,14 +164,14 @@ std::shared_ptr<fe::graph::Graph> build_graph(GraphBuildParams& params) {
                                 .set_dim({batch_size, num_heads_q, sequence_length_q, head_size_qk})
                                 .set_stride(stride));
 
-  set_stride(stride, batch_size, num_heads_kv, sequence_length_kv, head_size_qk, is_kv_bsnh);
+  set_stride(stride, num_heads_kv, sequence_length_kv, head_size_qk, is_kv_bsnh);
   auto K = mha_graph->tensor(fe::graph::Tensor_attributes()
                                 .set_name("K")
                                 .set_uid(K_UID)
                                 .set_dim({batch_size, num_heads_kv, sequence_length_kv, head_size_qk})
                                 .set_stride(stride));
 
-  set_stride(stride, batch_size, num_heads_kv, sequence_length_kv, head_size_v, is_kv_bsnh);
+  set_stride(stride, num_heads_kv, sequence_length_kv, head_size_v, is_kv_bsnh);
   auto V = mha_graph->tensor(fe::graph::Tensor_attributes()
                                 .set_name("V")
                                 .set_uid(V_UID)
@@ -219,7 +221,7 @@ std::shared_ptr<fe::graph::Graph> build_graph(GraphBuildParams& params) {
   auto [O, Stats] = mha_graph->sdpa(Q, K, V, attributes);
 
   constexpr bool is_output_bsnh = true;
-  set_stride(stride, batch_size, num_heads_q, sequence_length_q, head_size_v, is_output_bsnh);
+  set_stride(stride, num_heads_q, sequence_length_q, head_size_v, is_output_bsnh);
 
   O->set_output(true)
     .set_dim({batch_size, num_heads_q, sequence_length_q, head_size_v})
